@@ -1,0 +1,54 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="800" height="220" viewBox="0 0 800 220" fill="none"
+	role="img" aria-labelledby="light-title light-desc">
+	<title id="light-title">rawr</title>
+	<desc id="light-desc">A small dinosaur beside the rawr wordmark. Remote files, mapped and
+		cached.</desc>
+
+	<g transform="translate(176 41) scale(.9)">
+		<path
+			fill="#16805D"
+			fill-rule="evenodd"
+			d="
+        M30 130
+        V79
+        L16 65 H35
+        L25 47 H47
+        L40 29 H68
+        C75 22 83 18 94 18
+        H121
+        C135 18 146 29 146 43
+        V58
+        C146 66 140 72 132 72
+        H126 L121 79 L116 72
+        H99 V82 H137 V86
+        C137 99 126 110 113 110
+        H87 V130 Z
+
+        M96 43
+        a5 5 0 1 0 -10 0
+        a5 5 0 1 0 10 0 Z
+
+        M134 48
+        a2 2 0 1 0 -4 0
+        a2 2 0 1 0 4 0 Z
+      "
+		/>
+	</g>
+
+	<g font-family="Inter, ui-sans-serif, system-ui, -apple-system, 'Segoe UI', sans-serif">
+		<text
+			x="338" y="122"
+			fill="#17232B"
+			font-size="76"
+			font-weight="700"
+			letter-spacing="-4"
+		>rawr</text>
+
+		<text
+			x="341" y="158"
+			fill="#586774"
+			font-size="17"
+			font-weight="400"
+		>Remote files, mapped and cached.</text>
+	</g>
+</svg>
