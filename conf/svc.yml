@@ -1,0 +1,16 @@
+name: rawr
+path: /opt/rawr
+network: true
+listening: true
+privileged_ports: false
+exec_memory: false
+writable_files: false
+writable_config: true
+config_file: config.yml
+runtime_dir: false
+devices: false
+full_devices: false
+subprocess: false
+separate_log_dir: true
+localhost_only: false
+private_users: false
