@@ -48,6 +48,23 @@ func TestSourceDocument(t *testing.T) {
 		{"empty rules", "/<repo>/<path...>", "index.html", "/project/", []string{}, "", false},
 		{"disabled empty catch-all", "/<repo>/<path...>", "", "/project/", nil, "", false},
 		{"disabled trailing slash", "/<repo>/<path...>", "", "/project/docs/", nil, "docs", true},
+		{"single missing document", "/<repo>/<path>", "index.html", "/project", nil, "index.html", true},
+		{"single trailing slash", "/<repo>/<path>", "index.html", "/project/", nil, "index.html", true},
+		{"single repeated trailing slash", "/<repo>/<path>", "index.html", "/project///", nil, "index.html", true},
+		{"single explicit index", "/<repo>/<path>", "index.html", "/project/index.html", nil, "index.html", true},
+		{"single extensionless file", "/<repo>/<path>", "index.html", "/project/docs", nil, "docs", true},
+		{"single nested directory", "/<repo>/<path>", "index.html", "/project/docs/", nil, "", false},
+		{"single missing repo", "/<repo>/<path>", "index.html", "/", nil, "", false},
+		{"single root", "/<path>", "index.html", "/", nil, "index.html", true},
+		{"single empty request", "/<path>", "index.html", "", nil, "", false},
+		{"single literal prefix", "/files/<repo>/<path>", "index.html", "/files/project", nil, "index.html", true},
+		{"single wrong prefix", "/files/<repo>/<path>", "index.html", "/other/project", nil, "", false},
+		{"single pattern trailing slash", "/<repo>/<path>/", "index.html", "/project", nil, "index.html", true},
+		{"single index allowed", "/<repo>/<path>", "index.html", "/project", []string{"*.html"}, "index.html", true},
+		{"single index denied", "/<repo>/<path>", "index.html", "/project", []string{"*.css"}, "", false},
+		{"single disabled index", "/<repo>/<path>", "", "/project", nil, "", false},
+		{"literal suffix missing", "/<repo>/index.html", "index.html", "/project", nil, "", false},
+		{"literal route", "/project", "index.html", "/project", nil, "", true},
 	}
 
 	for _, test := range tests {

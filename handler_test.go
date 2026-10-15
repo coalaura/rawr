@@ -34,12 +34,44 @@ func (transport *handlerTransport) RoundTrip(request *http.Request) (*http.Respo
 }
 
 func TestHandleDocument(t *testing.T) {
+	tests := []handlerDocumentTest{
+		{"/project/", http.StatusOK, "/project/index.html?raw=1", "text/html", 1},
+		{"/project/index.html", http.StatusOK, "/project/index.html?raw=1", "text/html", 1},
+		{"/project/docs/", http.StatusOK, "/project/docs/index.html?raw=1", "text/html", 2},
+		{"/project/docs/index.html", http.StatusOK, "/project/docs/index.html?raw=1", "text/html", 2},
+		{"/project/docs", http.StatusOK, "/project/docs?raw=1", "text/plain", 3},
+		{"/project/guide.HTML?ignored=.txt", http.StatusOK, "/project/guide.HTML?raw=1", "text/html", 4},
+		{"/project/private/", http.StatusNotFound, "404: Not Found", "text/plain", 4},
+		{"/other/", http.StatusNotFound, "404: Not Found", "text/plain", 4},
+		{"/project", http.StatusNotFound, "404: Not Found", "text/plain", 4},
+	}
+
+	testHandleDocument(t, "/<repo>/<path...>", tests)
+}
+
+func TestHandleSingleDocument(t *testing.T) {
+	tests := []handlerDocumentTest{
+		{"/project", http.StatusOK, "/project/index.html?raw=1", "text/html", 1},
+		{"/project/", http.StatusOK, "/project/index.html?raw=1", "text/html", 1},
+		{"/project/index.html", http.StatusOK, "/project/index.html?raw=1", "text/html", 1},
+		{"/project/docs", http.StatusOK, "/project/docs?raw=1", "text/plain", 2},
+		{"/project/docs/", http.StatusNotFound, "404: Not Found", "text/plain", 2},
+		{"/other", http.StatusNotFound, "404: Not Found", "text/plain", 2},
+		{"/", http.StatusNotFound, "404: Not Found", "text/plain", 2},
+	}
+
+	testHandleDocument(t, "/<repo>/<path>", tests)
+}
+
+func testHandleDocument(t *testing.T, pattern string, tests []handlerDocumentTest) {
+	t.Helper()
+
 	cfg := &Config{
 		Server: ConfigServer{Port: 2112},
 		Sources: []ConfigSource{
 			{
 				Host:           "src.example.com",
-				Path:           "/<repo>/<path...>",
+				Path:           pattern,
 				Target:         "https://upstream.example.com/<repo>/<path>?raw=1",
 				Index:          "index.html",
 				Mime:           "text/plain",
@@ -68,18 +100,6 @@ func TestHandleDocument(t *testing.T) {
 
 	transport := &handlerTransport{}
 	cfg.Sources[0].cache.client = &http.Client{Transport: transport}
-
-	tests := []handlerDocumentTest{
-		{"/project/", http.StatusOK, "/project/index.html?raw=1", "text/html", 1},
-		{"/project/index.html", http.StatusOK, "/project/index.html?raw=1", "text/html", 1},
-		{"/project/docs/", http.StatusOK, "/project/docs/index.html?raw=1", "text/html", 2},
-		{"/project/docs/index.html", http.StatusOK, "/project/docs/index.html?raw=1", "text/html", 2},
-		{"/project/docs", http.StatusOK, "/project/docs?raw=1", "text/plain", 3},
-		{"/project/guide.HTML?ignored=.txt", http.StatusOK, "/project/guide.HTML?raw=1", "text/html", 4},
-		{"/project/private/", http.StatusNotFound, "404: Not Found", "text/plain", 4},
-		{"/other/", http.StatusNotFound, "404: Not Found", "text/plain", 4},
-		{"/project", http.StatusNotFound, "404: Not Found", "text/plain", 4},
-	}
 
 	for _, test := range tests {
 		t.Run(test.request, func(t *testing.T) {

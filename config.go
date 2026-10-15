@@ -21,9 +21,10 @@ type ConfigCache struct {
 }
 
 type ConfigSource struct {
-	compiledPath   *CompiledPath
-	mimeExtensions map[string]string
-	cache          *Cache
+	compiledPath       *CompiledPath
+	mimeExtensions     map[string]string
+	cache              *Cache
+	indexParentSlashes int
 
 	Host           string              `yaml:"host"`
 	Path           string              `yaml:"path"`

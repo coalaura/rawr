@@ -43,13 +43,28 @@ func (s *ConfigSource) initRouting() error {
 
 	s.compiledPath = compiledPath
 	s.mimeExtensions = extensions
+	s.indexParentSlashes = -1
+
+	lastPart := compiledPath.parts[len(compiledPath.parts)-1]
+	if s.Index != "" && lastPart.name != "" && !lastPart.catchAll {
+		// Only the final single-segment variable may be implicitly filled by the index.
+		s.indexParentSlashes = strings.Count(trimTrailingSlashes(s.Path), "/") - 1
+	}
 
 	return nil
 }
 
 func (s *ConfigSource) documentPath(requestPath string) string {
-	if s.Index != "" && strings.HasSuffix(requestPath, "/") {
+	if s.Index == "" {
+		return requestPath
+	}
+
+	if strings.HasSuffix(requestPath, "/") {
 		return strings.TrimRight(requestPath, "/") + "/" + s.Index
+	}
+
+	if s.indexParentSlashes >= 0 && strings.HasPrefix(requestPath, "/") && strings.Count(requestPath, "/") == s.indexParentSlashes {
+		return requestPath + "/" + s.Index
 	}
 
 	return requestPath

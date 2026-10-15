@@ -93,7 +93,9 @@ For a source with `path: /<repo>/<path...>` and `index: index.html`:
 | `/project/docs` | `docs` |
 | `/project/docs/guide.html` | `docs/guide.html` |
 
-Only a trailing slash triggers index resolution; extensionless paths are not treated as directories. No redirect or upstream probing is performed. Directory requests and explicit requests for their index file share the same upstream cache entry. Omitting `index` preserves the existing path-matching behavior.
+For a final single-segment variable, such as `path: /<repo>/<path>`, the index also fills the missing final segment without a trailing slash: `/project` and `/project/` both resolve to `/project/index.html`. An existing final segment remains a file, so `/project/docs` still captures `docs`. This implicit index does not apply to catch-all variables such as `<path...>`, where only a trailing slash triggers index resolution.
+
+No redirect or upstream probing is performed. Directory requests and explicit requests for their index file share the same upstream cache entry. Omitting `index` preserves the existing path-matching behavior.
 
 ### MIME types
 
