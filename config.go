@@ -21,15 +21,18 @@ type ConfigCache struct {
 }
 
 type ConfigSource struct {
-	compiledPath *CompiledPath
-	cache        *Cache
+	compiledPath   *CompiledPath
+	mimeExtensions map[string]string
+	cache          *Cache
 
-	Host    string              `yaml:"host"`
-	Path    string              `yaml:"path"`
-	Target  string              `yaml:"target"`
-	Mime    string              `yaml:"mime"`
-	Allowed map[string][]string `yaml:"allowed"`
-	Cache   ConfigCache         `yaml:"cache"`
+	Host           string              `yaml:"host"`
+	Path           string              `yaml:"path"`
+	Target         string              `yaml:"target"`
+	Index          string              `yaml:"index,omitempty"`
+	Mime           string              `yaml:"mime"`
+	MimeExtensions map[string]string   `yaml:"mime_extensions,omitempty"`
+	Allowed        map[string][]string `yaml:"allowed"`
+	Cache          ConfigCache         `yaml:"cache"`
 }
 
 type Config struct {
@@ -115,11 +118,11 @@ func (c *Config) Init() error {
 	for idx := range c.Sources {
 		source := &c.Sources[idx]
 
-		compiledPath, err := CompilePath(source.Path, source.Allowed)
+		err := source.initRouting()
 		if err != nil {
 			c.Close()
 
-			return err
+			return fmt.Errorf("source %q: %w", source.Host, err)
 		}
 
 		cache, err := NewCache(source.Cache, nil)
@@ -129,7 +132,6 @@ func (c *Config) Init() error {
 			return fmt.Errorf("source %q: %w", source.Host, err)
 		}
 
-		source.compiledPath = compiledPath
 		source.cache = cache
 
 		c.sourceMap[source.Host] = source

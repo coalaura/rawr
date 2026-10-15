@@ -14,7 +14,6 @@ concurrency:
 
 env:
   BINARY_NAME: rawr
-  BUILDER_VERSION: v0.3.0
 
 jobs:
   verify:
@@ -54,113 +53,71 @@ jobs:
       - name: Checkout
         uses: actions/checkout@v7
 
-      - name: Set up Go
-        uses: actions/setup-go@v7
-        with:
-          go-version-file: go.mod
-          cache: true
-
       - name: Build
-        shell: bash
-        env:
-          CGO_ENABLED: 0
-          GOARCH: ${{ matrix.goarch }}
-          GOOS: ${{ matrix.goos }}
-        run: |
-          extension=""
-          if [[ "$GOOS" == "windows" ]]; then
-            extension=".exe"
-          fi
-
-          mkdir -p dist
-          go build \
-            -trimpath \
-            -buildvcs=false \
-            -ldflags="-s -w -X main.Version=${GITHUB_REF_NAME}" \
-            -o "dist/${BINARY_NAME}-${GOOS}-${GOARCH}${extension}" \
-            .
-
-      - name: Upload binary
-        uses: actions/upload-artifact@v7
+        id: build
+        uses: coalaura/build@v1
         with:
-          name: ${{ env.BINARY_NAME }}-${{ matrix.goos }}-${{ matrix.goarch }}
-          path: dist/*
-          if-no-files-found: error
-          retention-days: 1
+          os: ${{ matrix.goos }}
+          arch: ${{ matrix.goarch }}
+          optimization: compatible
+          generate: false
+          output: dist/${{ env.BINARY_NAME }}-${{ matrix.goos }}-${{ matrix.goarch }}${{ matrix.goos == 'windows' && '.exe' || '' }}
+          go-flags: |
+            -ldflags=-X main.Version=${{ github.ref_name }}
 
-  sign:
-    needs: build
-    runs-on: ubuntu-latest
-
-    steps:
-      - name: Checkout
-        uses: actions/checkout@v7
-
-      - name: Set up Go
-        uses: actions/setup-go@v7
+      - name: Sign
+        id: sign
+        uses: coalaura/sign@v1
         with:
-          go-version-file: go.mod
-          cache: false
-
-      - name: Install builder
-        run: go install github.com/coalaura/builder@${BUILDER_VERSION}
-
-      - name: Download binaries
-        uses: actions/download-artifact@v8
-        with:
-          pattern: ${{ env.BINARY_NAME }}-*
-          path: dist
-          merge-multiple: true
-
-      - name: Sign binaries
-        shell: bash
-        env:
-          COALAURA_PFX: ${{ secrets.COALAURA_PFX }}
-          COALAURA_PFX_PASSWORD: ${{ secrets.COALAURA_PFX_PASSWORD }}
-        run: |
-          set -euo pipefail
-
-          umask 077
-          pfx_path="$RUNNER_TEMP/coalaura.pfx"
-          trap 'rm -f "$pfx_path"' EXIT
-
-          printf '%s' "$COALAURA_PFX" | base64 --decode > "$pfx_path"
-
-          for binary in dist/${BINARY_NAME}-*; do
-            builder sign "$binary" \
-              --sign "$pfx_path" \
-              --passphrase "$COALAURA_PFX_PASSWORD" \
-              --sign-chain https://wiese2.org/pki/issuing.pem \
-              --sign-chain https://wiese2.org/pki/root.pem
-          done
-
-          cd dist
-          sha256sum -b ${BINARY_NAME}-* > SHA256SUMS
+          path: ${{ steps.build.outputs.path }}
+          key: ${{ secrets.COALAURA_PFX }}
+          passphrase: ${{ secrets.COALAURA_PFX_PASSWORD }}
+          chain: |
+            https://wiese2.org/pki/issuing.pem
+            https://wiese2.org/pki/root.pem
 
       - name: Upload signed binaries
         uses: actions/upload-artifact@v7
         with:
-          name: release
-          path: dist/*
+          name: signed-${{ env.BINARY_NAME }}-${{ matrix.goos }}-${{ matrix.goarch }}
+          path: ${{ steps.sign.outputs.path }}
           if-no-files-found: error
           retention-days: 1
 
   release:
-    needs: sign
+    needs: build
     runs-on: ubuntu-latest
     permissions:
       contents: write
+      id-token: write
+      attestations: write
+      artifact-metadata: write
 
     steps:
       - name: Download signed binaries
         uses: actions/download-artifact@v8
         with:
-          name: release
+          pattern: signed-${{ env.BINARY_NAME }}-*
           path: dist
+          merge-multiple: true
+
+      - name: Generate checksums
+        working-directory: dist
+        run: sha256sum -b ${BINARY_NAME}-* > SHA256SUMS
+
+      - name: Attest signed binaries
+        uses: actions/attest@v4
+        with:
+          subject-checksums: dist/SHA256SUMS
 
       - name: Create GitHub release
         uses: softprops/action-gh-release@v3
         with:
-          files: dist/*
+          files: |
+            dist/${{ env.BINARY_NAME }}-*
+            dist/SHA256SUMS
+          fail_on_unmatched_files: true
           generate_release_notes: true
+          prerelease: ${{ contains(github.ref_name, '-') }}
           name: Release ${{ github.ref_name }}
+          token: ${{ secrets.GITHUB_TOKEN }}

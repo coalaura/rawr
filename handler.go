@@ -19,7 +19,9 @@ func Handle(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	variables, matched := source.compiledPath.Match(r.URL.Path)
+	documentPath := source.documentPath(r.URL.Path)
+
+	variables, matched := source.compiledPath.Match(documentPath)
 	if !matched {
 		NotFound(w)
 
@@ -55,11 +57,7 @@ func Handle(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	contentType := source.Mime
-	if contentType == "" {
-		contentType = response.ContentType
-	}
-
+	contentType := source.contentType(documentPath, response.ContentType)
 	if contentType != "" {
 		w.Header().Set("Content-Type", contentType)
 	}

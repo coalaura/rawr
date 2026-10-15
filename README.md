@@ -6,7 +6,7 @@
 
 A small HTTP service for exposing remote files through configurable host and path mappings.
 
-rawr supports path variables, allowlists, response caching, stale responses and conditional upstream requests.
+rawr supports path variables, document indexes, extension-specific MIME types, allowlists, response caching, stale responses and conditional upstream requests.
 
 ## Installation
 
@@ -80,6 +80,38 @@ Variables can be used in the source target:
 target: https://example.com/<repo>/<path>
 ```
 
+### Document index
+
+Set an optional source-level `index` to a filename such as `index.html`. Requests ending in `/` have that filename appended before path matching and `allowed` validation. The index must be a single valid path segment, excluding `.` and `..`.
+
+For a source with `path: /<repo>/<path...>` and `index: index.html`:
+
+| Request | Resolved `<path>` |
+| --- | --- |
+| `/project/` | `index.html` |
+| `/project/docs/` | `docs/index.html` |
+| `/project/docs` | `docs` |
+| `/project/docs/guide.html` | `docs/guide.html` |
+
+Only a trailing slash triggers index resolution; extensionless paths are not treated as directories. No redirect or upstream probing is performed. Directory requests and explicit requests for their index file share the same upstream cache entry. Omitting `index` preserves the existing path-matching behavior.
+
+### MIME types
+
+The source-level `mime` sets the default response `Content-Type`. Use `mime_extensions` to override it for individual file extensions. For example, a source serving web documents can include:
+
+```yaml
+index: index.html
+mime: text/plain
+mime_extensions:
+  .html: text/html
+  .css: text/css
+  .js: text/javascript
+```
+
+Extensions must include a leading dot and are matched case-insensitively against the resolved document's final extension, including an inserted index filename. Case-insensitive duplicate keys are rejected. Compound extensions such as `.tar.gz` are not supported; use `.gz` instead.
+
+The response uses the matching nonempty extension override, then `mime` if configured, then the upstream `Content-Type`. Omitting `mime_extensions` preserves the existing MIME behavior.
+
 ### Allowed values
 
 The optional `allowed` section restricts values captured by a variable:
@@ -110,7 +142,7 @@ Variables without an `allowed` entry accept any valid path value.
 | `max_bytes` | Maximum cache size | `64M` |
 | `max_body_bytes` | Maximum size of one upstream response | `8M` |
 
-Byte sizes accept `K`, `M`, `G`, and `T` suffixes using binary units.
+Byte sizes accept `K`, `M`, `G` and `T` suffixes using binary units.
 
 ## Building from source
 
